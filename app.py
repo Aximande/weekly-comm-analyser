@@ -1,16 +1,12 @@
-# fichier : app.py
-
 import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import re
 from datetime import datetime
 import os
-import tiktoken  # Importation de tiktoken pour gérer les tokens
+import tiktoken
 
 # Configuration de la clé API OpenAI
-#openai_api_key = 'VOTRE_CLÉ_API_OPENAI'  # Remplacez par votre clé API
-
 openai_api_key = st.secrets["openai_api_key"]
 
 if not openai_api_key:
@@ -31,7 +27,7 @@ st.set_page_config(
 st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Brut_logo.svg/1200px-Brut_logo.svg.png", width=150)
 
 # Titre de l'application
-st.title("Analyse des Questions Non Répondues")
+st.title("Brut.Edito: Analyse des Questions Non Répondues de nos publications Brut")
 st.write("Bienvenue dans l'outil d'analyse des commentaires pour les journalistes de **Brut**.")
 
 # Explications pour les journalistes
@@ -150,8 +146,8 @@ if uploaded_file is not None:
         # Initialiser une liste pour les résultats
         resultats_list = []
 
-        # Initialiser le tokenizer pour le modèle GPT-4
-        encoding = tiktoken.encoding_for_model('gpt-4')
+        # Initialiser le tokenizer pour le modèle GPT-4o-mini
+        encoding = tiktoken.encoding_for_model('gpt-4o-mini')
 
         for publication_id in videos_a_analyser:
             with st.spinner(f"Analyse de la vidéo {publication_id} en cours..."):
@@ -185,14 +181,18 @@ Veuillez fournir votre réponse en français.
                         num_tokens += len(encoding.encode(content))
                     return num_tokens
 
-                max_tokens_model = 128,000  # Pour GPT-4o standard
+                max_tokens_model = 128000  # Pour GPT-4o-mini
                 tokens_prompt = count_tokens(messages)
 
+                # Debug logging
+                st.write(f"tokens_prompt: {tokens_prompt}, type: {type(tokens_prompt)}")
+                st.write(f"max_tokens_model: {max_tokens_model}, type: {type(max_tokens_model)}")
+
                 # Vérifier si le prompt dépasse la longueur maximale
-                if tokens_prompt > max_tokens_model - 500:  # Réserver 500 tokens pour la réponse
+                if tokens_prompt > max_tokens_model - 16384:  # Réserver 16 384 tokens pour la réponse
                     st.warning(f"Le prompt pour la vidéo {publication_id} est trop long ({tokens_prompt} tokens). Les commentaires seront tronqués.")
                     # Calculer le nombre de tokens disponibles pour les commentaires
-                    tokens_disponibles = max_tokens_model - 500 - count_tokens(messages[:1])  # Enlever les tokens du système et de l'instruction
+                    tokens_disponibles = max_tokens_model - 16384 - count_tokens(messages[:1])  # Enlever les tokens du système et de l'instruction
 
                     # Tronquer les commentaires pour s'adapter
                     commentaires_tokens = encoding.encode(commentaires_concaténés)
@@ -211,9 +211,9 @@ Veuillez fournir votre réponse en français.
 """
                 try:
                     completion = client.chat.completions.create(
-                        model="gpt-4",
+                        model="gpt-4o-mini",
                         messages=messages,
-                        max_tokens=500,
+                        max_tokens=16384,  # Sortie maximale de 16 384 tokens
                         temperature=0.7,
                         n=1,
                     )
